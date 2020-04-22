@@ -3,8 +3,9 @@ use actix_web::web::{get, ServiceConfig};
 use actix_web::{error, middleware, web, App, Error, HttpRequest, HttpResponse, HttpServer, Scope};
 pub use log::{error, info, trace, warn};
 use serde::{Deserialize, Serialize};
+use sqlx::{PgConnection, Pool};
 
-async fn get_current_user() -> HttpResponse {
+async fn get_current_user(pool: web::Data<Pool<PgConnection>>) -> HttpResponse {
     info!("get_current_user");
     HttpResponse::Ok().json(User {
         id: "userId".to_string(),
