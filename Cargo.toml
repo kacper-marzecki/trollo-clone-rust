@@ -10,6 +10,8 @@ actix-service = "1.0.5"
 actix-rt = "1.1.0"
 
 sqlx = { version = "0.3.4", default-features = false, features = ["runtime-tokio", "postgres" ] }
+diesel_migrations = "1.4.0"
+diesel = {version = "1.4.4", features = ["postgres"]}
 
 dotenv = "0.15.0"
 env_logger = "0.7"

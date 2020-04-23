@@ -1,4 +1,5 @@
 extern crate dotenv;
+#[macro_use] extern crate diesel_migrations;
 
 use dotenv::dotenv;
 
@@ -14,7 +15,10 @@ use crate::model::{Board, Card, CardTaskItem, Lane, User};
 use actix_web::web::get;
 use actix_web::{error, middleware, web, App, Error, HttpRequest, HttpResponse, HttpServer};
 use serde::{Deserialize, Serialize};
-use sqlx::{PgConnection, PgPool, Pool};
+use sqlx::{PgConnection, PgPool, Pool, Connect};
+use diesel::Connection;
+
+diesel_migrations::embed_migrations!("migrations");
 
 #[actix_rt::main]
 async fn main() -> std::io::Result<()> {
@@ -23,6 +27,9 @@ async fn main() -> std::io::Result<()> {
     env_logger::init();
 
     let db_url = std::env::var("DATABASE_URL").expect("Cannot determine database url");
+    let migration_connection = diesel::pg::PgConnection::establish(&db_url)
+        .expect("Cannot aquire connection for db migration");
+    embedded_migrations::run(&migration_connection);
     let db_pool = PgPool::new(db_url.as_str())
         .await
         .expect("Cannot create db pool");
