@@ -1,23 +1,26 @@
-extern crate dotenv;
 #[macro_use] extern crate diesel_migrations;
+extern crate dotenv;
 
+use actix_web::{App, error, Error, HttpRequest, HttpResponse, HttpServer, middleware, web};
+use actix_web::web::get;
+use diesel::Connection;
 use dotenv::dotenv;
-
 pub use log::{error, info, trace, warn};
-mod api;
-mod model;
+use serde::{Deserialize, Serialize};
+use sqlx::{Connect, PgConnection, PgPool, Pool};
+
 use crate::api::board_api::board_routes;
 use crate::api::card_api::card_routes;
 use crate::api::lane_api::lane_routes;
 use crate::api::routes;
 use crate::api::user_api::user_routes;
 use crate::model::{Board, Card, CardTaskItem, Lane, User};
-use actix_web::web::get;
-use actix_web::{error, middleware, web, App, Error, HttpRequest, HttpResponse, HttpServer};
-use serde::{Deserialize, Serialize};
-use sqlx::{PgConnection, PgPool, Pool, Connect};
-use diesel::Connection;
 
+mod api;
+mod model;
+mod app_error;
+mod utils;
+mod service;
 diesel_migrations::embed_migrations!("migrations");
 
 #[actix_rt::main]

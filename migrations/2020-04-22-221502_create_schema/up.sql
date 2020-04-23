@@ -1,16 +1,26 @@
 -- Your SQL goes here
 
--- pub struct CardTaskItem {
---     pub id: String,
---     pub card_id: String,
---     pub text: String,
---     pub is_complete: bool,
--- }
 
-create table card_task_item
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+CREATE TABLE users
+(
+    id         uuid default uuid_generate_v4() PRIMARY KEY,
+    username   VARCHAR(64)  NOT NULL,
+    email      VARCHAR(100) NOT NULL,
+    password   VARCHAR(64)  NOT NULL,
+    avatar_id  INT          NULL,
+    created_at TIMESTAMP    NOT NULL
+);
+CREATE INDEX users_email_idx ON users (email);
+CREATE INDEX users_username_idx ON users (username);
+
+
+create table card_task_items
 (
     id          uuid primary key,
     card_id     uuid,
     text_       text,
     is_complete bool
 );
+

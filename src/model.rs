@@ -3,9 +3,10 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize)]
 pub struct User {
     pub id: String,
-    pub name: String,
+    pub username: String,
     pub email: String,
     pub avatar_id: String,
+    pub password: String,
     pub roles: Vec<String>,
 }
 
