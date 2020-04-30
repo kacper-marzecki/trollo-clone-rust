@@ -6,6 +6,7 @@ use diesel::sql_query;
 use futures_util::FutureExt;
 use bcrypt::{hash, DEFAULT_COST};
 
+// TODO no exists checks
 pub async fn register_user(
     request: UserRegisterRequest,
     pool: web::Data<Pool<PgConnection>>

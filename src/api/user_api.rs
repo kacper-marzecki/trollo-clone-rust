@@ -59,6 +59,64 @@ async fn register_user(request: web::Json<UserRegisterRequest>, pool: web::Data<
         .map(|_| HttpResponse::Ok().finish())
 }
 
+#[derive(Deserialize)]
+pub struct LoginRequest {
+    pub username: String,
+    pub password: String
+}
+
+async fn login(request: web::Json<LoginRequest>,
+               id: Identity,
+               pool: web::Data<Pool<PgConnection>>,
+               generator: web::Data<CsrfTokenGenerator>) -> Result<HttpResponse, AppError> {
+    let token = create_token(&user.email, &user.company)?;
+
+    id.remember(token);
+    user_service::login(request.0, pool);
+    // Finally our response will have a csrf token for security.
+    let response =
+        HttpResponse::Ok()
+            .header("X-CSRF-TOKEN", hex::encode(generator.generate()))
+            .json(user);
+    Ok(response)
+}
+
+pub fn login(auth_user: web::Json<AuthUser>,
+             id: Identity,
+             pool: web::Data<PgPool>,
+             generator: web::Data<CsrfTokenGenerator>)
+             -> Result<HttpResponse, HttpResponse> {
+    let pg_pool = pg_pool_handler(pool)?;
+    let user = auth_user
+        .login(&pg_pool)
+        .map_err(|e| {
+            match e {
+                MyStoreError::DBError(diesel::result::Error::NotFound) =>
+                    HttpResponse::NotFound().json(e.to_string()),
+                _ =>
+                    HttpResponse::InternalServerError().json(e.to_string())
+            }
+        })?;
+
+    // This is the jwt token we will send in a cookie.
+    let token = create_token(&user.email, &user.company)?;
+
+    id.remember(token);
+
+    // Finally our response will have a csrf token for security.
+    let response =
+        HttpResponse::Ok()
+            .header("X-CSRF-TOKEN", hex::encode(generator.generate()))
+            .json(user);
+    Ok(response)
+}
+
+pub fn logout(id: Identity) -> Result<HttpResponse, HttpResponse> {
+    id.forget();
+    Ok(HttpResponse::Ok().into())
+}
+
+
 
 async fn get_user_by_id(r: HttpRequest) -> HttpResponse {
     info!(

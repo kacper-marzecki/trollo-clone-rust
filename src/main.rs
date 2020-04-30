@@ -21,6 +21,7 @@ mod model;
 mod app_error;
 mod utils;
 mod service;
+mod repository;
 diesel_migrations::embed_migrations!("migrations");
 
 #[actix_rt::main]
