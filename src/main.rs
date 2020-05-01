@@ -44,7 +44,7 @@ async fn main() -> std::io::Result<()> {
 
     HttpServer::new(move || {
         App::new()
-            .data(db_pool)
+            .data(db_pool.clone())
             .wrap(middleware::Logger::default())
             .configure(routes)
     })
