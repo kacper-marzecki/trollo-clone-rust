@@ -4,12 +4,16 @@ use actix_web::web::{get, ServiceConfig};
 pub use log::{error, info, trace, warn};
 use serde::{Deserialize, Serialize};
 use sqlx::{PgConnection, Pool};
+use validator::Validate;
 
 use crate::app_error::AppError;
 use crate::model::{Board, Card, CardTaskItem, Lane, User};
-use crate::utils::is_blank;
+use crate::utils::{is_blank, respond_ok};
 use crate::service::user_service;
 use futures_util::FutureExt;
+use crate::validation::validate;
+use crate::repository::{Repository, RepositoryImpl};
+use crate::repository::user_repository::UserRepository;
 
 #[derive(Serialize)]
 struct UserInfoResponse {
@@ -32,31 +36,41 @@ async fn get_current_user(pool: web::Data<Pool<PgConnection>>) -> Result<HttpRes
 }
 
 
-#[derive(Deserialize)]
+#[derive(Clone, Debug, Deserialize, Validate)]
 pub struct UserRegisterRequest {
-    pub email: String,
+    #[validate(length(
+    min = 3,
+    message = "username is required and must be at least 3 characters"
+    ))]
     pub username: String,
+
+    #[validate(email(message = "email must be a valid email"))]
+    pub email: String,
+
+    #[validate(length(
+    min = 6,
+    message = "password is required and must be at least 6 characters"
+    ))]
     pub password: String,
-    pub password_confirmation: String
 }
+// impl UserRegisterRequest {
+//     pub fn validate(&self) -> Result<&Self, AppError> {
+//         if is_blank(&self.email)
+//         || is_blank(&self.password)
+//         || is_blank(&self.password_confirmation)
+//         || self.password.eq(self.password_confirmation.as_str()){
+//             Ok(self)
+//         } else {
+//             Err(AppError::ValidationError(vec!["validation Error".to_string()]))
+//         }
+//     }
+// }
 
-impl UserRegisterRequest {
-    pub fn validate(&self) -> Result<&Self, AppError> {
-        if is_blank(&self.email)
-        || is_blank(&self.password)
-        || is_blank(&self.password_confirmation)
-        || self.password.eq(self.password_confirmation.as_str()){
-            Ok(self)
-        } else {
-            Err(AppError::ValidationError(vec!["validation Error".to_string()]))
-        }
-    }
-}
-
-async fn register_user(request: web::Json<UserRegisterRequest>, pool: web::Data<Pool<PgConnection>>) -> Result<HttpResponse, AppError> {
-    request.validate()?;
-    user_service::register_user(request.0, pool).await
-        .map(|_| HttpResponse::Ok().finish())
+async fn register_user(request: web::Json<UserRegisterRequest>,
+                       pool: web::Data<Box<RepositoryImpl>>) -> Result<HttpResponse, AppError> {
+    validate(&request)?;
+    user_service::register_user(request.0, pool.as_ref()).await?;
+    respond_ok()
 }
 
 #[derive(Deserialize)]
@@ -64,28 +78,6 @@ pub struct LoginRequest {
     pub username: String,
     pub password: String
 }
-
-// async fn login(request: web::Json<LoginRequest>,
-//                id: Identity,
-//                pool: web::Data<Pool<PgConnection>>,
-//                generator: web::Data<CsrfTokenGenerator>) -> Result<HttpResponse, AppError> {
-//     let token = create_token(&user.email, &user.company)?;
-//
-//     id.remember(token);
-//     user_service::login(request.0, pool);
-//     // Finally our response will have a csrf token for security.
-//     let response =
-//         HttpResponse::Ok()
-//             .header("X-CSRF-TOKEN", hex::encode(generator.generate()))
-//             .json(user);
-//     Ok(response)
-// }
-
-
-// pub fn logout(id: Identity) -> Result<HttpResponse, HttpResponse> {
-//     id.forget();
-//     Ok(HttpResponse::Ok().into())
-// }
 
 async fn get_user_by_id(r: HttpRequest) -> HttpResponse {
     info!(
@@ -108,3 +100,4 @@ pub fn user_routes() -> Scope {
         .route("", web::post().to(register_user))
         .route("/{userId}", web::get().to(get_user_by_id))
 }
+

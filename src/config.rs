@@ -36,12 +36,12 @@ mod tests {
     #[test]
     fn it_gets_a_config() {
         let config = get_config();
-        assert_ne!(config.server, "".to_string());
+        assert_ne!(config.server_address, "".to_string());
     }
 
     #[test]
     fn it_gets_a_config_from_the_lazy_static() {
         let config = &CONFIG;
-        assert_ne!(config.server, "".to_string());
+        assert_ne!(config.server_address, "".to_string());
     }
 }

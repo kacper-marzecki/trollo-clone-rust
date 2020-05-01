@@ -1,8 +1,13 @@
+// #![feature(async_closure)]
 #[macro_use] extern crate diesel_migrations;
 extern crate dotenv;
 #[macro_use] extern crate lazy_static;
 #[macro_use] extern crate serde_derive;
 #[macro_use] extern crate validator_derive;
+#[macro_use] extern crate sqlx;
+#[cfg(test)]
+#[macro_use] extern crate mockall;
+#[macro_use] extern crate async_trait;
 
 use actix_web::{App, error, Error, HttpRequest, HttpResponse, HttpServer, middleware, web};
 use actix_web::web::get;
@@ -19,6 +24,9 @@ use crate::api::lane_api::lane_routes;
 use crate::api::routes;
 use crate::api::user_api::user_routes;
 use crate::model::{Board, Card, CardTaskItem, Lane, User};
+use crate::service::authentication_service::get_identity_service;
+use actix_cors::Cors;
+use crate::repository::RepositoryImpl;
 
 mod api;
 mod model;
@@ -42,10 +50,13 @@ async fn main() -> std::io::Result<()> {
         .await
         .expect("Cannot create db pool");
 
+
     HttpServer::new(move || {
         App::new()
-            .data(db_pool.clone())
+            .data(Box::new(RepositoryImpl{pool :db_pool.clone()}))
             .wrap(middleware::Logger::default())
+            .wrap(get_identity_service())
+            .wrap(Cors::new().supports_credentials().finish())
             .configure(routes)
     })
     .bind(CONFIG.server_address.clone())?
