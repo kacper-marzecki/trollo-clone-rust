@@ -1,13 +1,13 @@
 use std::sync::Arc;
 use std::borrow::BorrowMut;
-use diesel::r2d2::ConnectionManager;
 use r2d2::PooledConnection;
-use diesel::pg::PgConnection;
+use r2d2_postgres::PostgresConnectionManager;
+use postgres::NoTls;
 
 pub mod user_repository;
 
-pub type Pool<T> = r2d2::Pool<ConnectionManager<T>>;
-pub type PoolConnection = PooledConnection<ConnectionManager<PgConnection>>;
+pub type ConnPool = r2d2::Pool<PostgresConnectionManager<NoTls>>;
+
 // pub struct RepositoryImpl (pub Transaction<PoolConnection<PgConnection>>);
 //
 // #[async_trait]

@@ -7,25 +7,19 @@ use std::borrow::BorrowMut;
 use std::pin::Pin;
 use std::future::Future;
 use r2d2::PooledConnection;
-use diesel::r2d2::ConnectionManager;
-use diesel::{RunQueryDsl, sql_query};
-use diesel::sql_types::{Time, Timestamp, Integer, Bool, Text};
 use chrono::{DateTime, Local, TimeZone};
-use diesel::pg::types::sql_types::Timestamptz;
-use diesel::expression::sql_literal::sql;
+use postgres::Transaction;
+use std::sync::Arc;
+use std::rc::Rc;
 
-struct UserRepository(PooledConnection<ConnectionManager<diesel::pg::PgConnection>>);
+pub struct UserRepository<'a, 'b>(pub &'a mut Transaction<'b>);
 
-impl UserRepository  {
-    fn create_user(&mut self, dto: CreateUserDto) -> Result<bool, AppError> {
-        let created = sql_query("
+impl UserRepository<'_, '_>  {
+    pub fn create_user(&mut self, dto: CreateUserDto) -> Result<bool, AppError> {
+        let created = self.0.execute("
         insert into users (username, email, password, avatar_id, created_at)
                                 values ($1, $2, $3, NULL, $4);
-          ").bind::<Text, _>(dto.username.as_str())
-            .bind::<Text, _>(dto.email)
-            .bind::<Text, _>(dto.password)
-            .bind::<Timestamptz, _>(chrono::Utc::now())
-            .get_result::<i32>(&self.0)
+          ", &[&dto.username, &dto.email, &dto.password, &chrono::Utc::now().timestamp()], )
             .map(|it| {
                 match it {
                     1 => true,
@@ -35,16 +29,14 @@ impl UserRepository  {
         Ok(created)
     }
 
-    fn exists_by_username_or_email(&mut self, username: &String, email: &String) -> Result<bool, AppError> {
-        let mut a = diesel::sql_query("
+    pub fn exists_by_username_or_email(&mut self, username: &String, email: &String) -> Result<bool, AppError> {
+        let mut a = self.0.query("
         select exists(select 1 from users where username = $1 or email = $2)
-    ").bind(username)
-            .bind::<String, _>(email)
-            .get_result(&self.0)
-            .map(|it| {
-                match it {
-                    1 => true,
-                    _ => false
+    ", &[&username, &email])
+            .map(|rows|{
+                match rows.first() {
+                    Some(x) => true,
+                    None => false
                 }
             })?;
         Ok(a)

@@ -8,10 +8,10 @@ use actix_web::http::StatusCode;
 use log::*;
 use log::error;
 use serde::{Deserialize, Serialize};
-use diesel::{
-    r2d2::PoolError,
-    result::{DatabaseErrorKind, Error as DBError},
-};
+// use diesel::{
+//     r2d2::PoolError,
+//     result::{DatabaseErrorKind, Error as DBError},
+// };
 use derive_more::Display;
 
 #[derive(Debug, Display, PartialEq)]
@@ -70,27 +70,34 @@ impl ResponseError for AppError {
         }
     }
 }
-impl From<PoolError> for AppError {
-    fn from(error: PoolError) -> AppError {
+impl From<r2d2::Error> for AppError {
+    fn from(error: r2d2::Error) -> AppError {
         error!("Pool Error Error {:?}", error);
         AppError::PoolError(error.to_string())
     }
 }
-impl From<DBError> for AppError {
-    fn from(error: DBError) -> AppError {
-        error!("Database Error {:?}", error);
-        match error {
-            DBError::DatabaseError(kind, info) => {
-                if let DatabaseErrorKind::UniqueViolation = kind {
-                    let message = info.details().unwrap_or_else(|| info.message()).to_string();
-                    return AppError::BadRequest(message);
-                }
-                AppError::InternalServerError("Unknown database error".into())
-            }
-            _ => AppError::InternalServerError("Unknown database error".into()),
-        }
+impl From<postgres::Error> for AppError {
+    fn from(error: postgres::Error) -> AppError {
+        error!("Pool Error Error {:?}", error);
+        AppError::InternalServerError("Internal Server error".into())
     }
 }
+
+// impl From<DBError> for AppError {
+//     fn from(error: DBError) -> AppError {
+//         error!("Database Error {:?}", error);
+//         match error {
+//             DBError::DatabaseError(kind, info) => {
+//                 if let DatabaseErrorKind::UniqueViolation = kind {
+//                     let message = info.details().unwrap_or_else(|| info.message()).to_string();
+//                     return AppError::BadRequest(message);
+//                 }
+//                 AppError::InternalServerError("Unknown database error".into())
+//             }
+//             _ => AppError::InternalServerError("Unknown database error".into()),
+//         }
+//     }
+// }
 // impl From<embedded_migrations::diesel::result::Error> for AppError {
 //     fn from(error: embedded_migrations::diesel::result::Error) -> AppError {
 //         error!("Pool Error Error {:?}", error);

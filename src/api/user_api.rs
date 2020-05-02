@@ -15,7 +15,9 @@ use crate::model::{Board, Card, CardTaskItem, Lane, User};
 use crate::service::user_service;
 use crate::utils::{is_blank, respond_ok};
 use crate::validation::validate;
-use crate::repository::Pool;
+use crate::repository::{ConnPool};
+use crate::repository::user_repository::UserRepository;
+use std::rc::Rc;
 
 #[derive(Serialize)]
 struct UserInfoResponse {
@@ -26,7 +28,7 @@ struct UserInfoResponse {
     roles: Vec<String>,
 }
 
-async fn get_current_user(pool: web::Data<Pool<PgConnection>>) -> Result<HttpResponse, Error> {
+async fn get_current_user(pool: web::Data<ConnPool>) -> Result<HttpResponse, Error> {
     info!("get_current_user");
     Ok(HttpResponse::Ok().json(UserInfoResponse {
         id: "userId".to_string(),
@@ -69,14 +71,16 @@ pub struct UserRegisterRequest {
 // }
 
 async fn register_user(request: web::Json<UserRegisterRequest>,
-                       pool: web::Data<Pool<PgConnection>>) -> Result<HttpResponse, AppError> {
+                       pool: web::Data<ConnPool>) -> Result<HttpResponse, AppError> {
     validate(&request)?;
-    let conn = pool.get()?;
-    let a = conn.transaction::<(), AppError, _>(||{
-
-        user_service::register_user(&conn, request.0);
-        Ok(())
-    });
+    let mut conn = pool.get()?;
+    let mut transaction = conn.transaction()?;
+    let mut repository = UserRepository(&mut transaction);
+    let result = user_service::register_user(&mut repository, request.0)
+        .map(|result|{
+            transaction.commit();
+            result
+        })?;
     respond_ok()
 }
 
