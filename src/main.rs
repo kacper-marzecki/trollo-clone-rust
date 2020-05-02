@@ -5,7 +5,7 @@ extern crate dotenv;
 #[macro_use] extern crate serde_derive;
 #[macro_use] extern crate validator_derive;
 #[macro_use] extern crate sqlx;
-#[cfg(test)]
+// #[cfg(test)]
 #[macro_use] extern crate mockall;
 #[macro_use] extern crate async_trait;
 

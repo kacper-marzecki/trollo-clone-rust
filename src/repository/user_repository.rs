@@ -6,45 +6,40 @@ use async_trait::async_trait;
 use futures_util::future::BoxFuture;
 use std::convert::TryInto;
 use actix_web::dev::Url;
-use uuid::Variant::Future;
 use std::borrow::BorrowMut;
 use crate::repository::{Repository, RepositoryImpl};
+use std::pin::Pin;
+use std::future::Future;
 
 type Conn = PoolConnection<PgConnection>;
 type Trans = Transaction<Conn>;
-//
-// #[async_trait]
-// pub trait TransactionSource {
-//     async fn commit(&self) ->  Result<(), sqlx::Error>;
-//     async fn rollback(&self) -> Result<(), Error>;
-//     fn get(self) -> Transaction<PoolConnection<PgConnection>>;
-// }
-//
-// #[async_trait]
-// impl TransactionSource for Transaction<PoolConnection<PgConnection>> {
-//     async fn commit(&self) -> Result<(), Error> {
-//         unimplemented!()
-//     }
-//     async fn rollback(&self) -> Result<(), Error> {
-//         unimplemented!()
-//     }
-//
-//     fn get(self) -> Transaction<PoolConnection<PgConnection>> {
-//         unimplemented!()
-//     }
-// }
 
-#[async_trait]
+// #[cfg_attr(feature = "test", automock)]
+#[automock]
 pub trait UserRepository: Repository {
-    async fn create_user(&mut self, dto: CreateUserDto) -> Result<u64, AppError>;
-    async fn exists_by_username_or_email(&mut self, username: &String, email: &String) -> Result<bool, AppError>;
+    fn create_user<'life0, 'async_trait>(
+        &'life0 mut self,
+        dto: CreateUserDto
+    )-> Pin<Box<dyn Future<Output=Result<u64, AppError>> + Send + 'async_trait>>
+        where
+            'life0: 'async_trait,
+            Self: 'async_trait,;
+    fn exists_by_username_or_email<'life0, 'life1, 'life2, 'async_trait>(
+        &'life0 mut self,
+        username: &'life1 String,
+        email: &'life2 String
+    )-> Pin<Box<dyn Future<Output=Result<bool, AppError>> + Send + 'async_trait>>
+        where
+            'life0: 'async_trait,
+            'life1: 'async_trait,
+            'life2: 'async_trait,
+            Self: 'async_trait,;
 }
-
 
 
 #[async_trait]
 impl UserRepository for RepositoryImpl {
-    async fn create_user(&mut self,  dto: CreateUserDto) -> Result<u64, AppError> {
+    async fn create_user(&mut self, dto: CreateUserDto) -> Result<u64, AppError> {
         sqlx::query("
         insert into users (username, email, password, avatar_id, created_at)
             values ($1, $2, $3, NULL, $4);

@@ -8,7 +8,7 @@ use sqlx::pool::PoolConnection;
 use crate::api::user_api::UserRegisterRequest;
 use crate::app_error::AppError;
 use crate::repository::{user_repository, RepositoryImpl, Repository};
-use crate::repository::user_repository::{CreateUserDto, UserRepository};
+use crate::repository::user_repository::{CreateUserDto, UserRepository, MockUserRepository};
 use crate::utils::respond_ok;
 // async fn in_transaction<T, F>(
 //     conn: PoolConnection<PgConnection>,
@@ -21,10 +21,8 @@ use crate::utils::respond_ok;
 //     Ok(result)
 // }
 
-#[cfg(not(test))]
 type Trans = Transaction<PoolConnection<PgConnection>>;
-#[cfg(test)]
-type Trans = tests::MockT;
+
 
 pub async fn register_user(
     request: UserRegisterRequest,
@@ -49,11 +47,12 @@ pub async fn register_user(
 #[cfg(test)]
 pub mod tests {
 mock!{
+    pub MockRepo{}
 
 }
     #[actix_rt::test]
     async fn doesnt_register_user_if_such_username_exists() {
-
+        // let asd = MockUserRepository::new();
         // mock!(Pool<PgConnection>)
         //     .
     }
