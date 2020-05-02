@@ -1,34 +1,36 @@
-use sqlx::{PgConnection, Pool, Transaction};
-use sqlx::pool::PoolConnection;
-use crate::repository::user_repository::UserRepository;
 use std::sync::Arc;
 use std::borrow::BorrowMut;
+use diesel::r2d2::ConnectionManager;
+use r2d2::PooledConnection;
+use diesel::pg::PgConnection;
 
 pub mod user_repository;
 
-pub struct RepositoryImpl (pub Transaction<PoolConnection<PgConnection>>);
-
-#[async_trait]
-impl Repository for RepositoryImpl {
-    fn get(&mut self) -> &mut Transaction<PoolConnection<PgConnection>> {
-        self.0.borrow_mut()
-    }
-
-    async fn commit(self) -> () {
-        self.0.commit().await;
-    }
-
-    async fn rollback(self) -> () {
-        self.0.rollback().await;
-    }
-}
-
-#[async_trait]
-pub trait Repository {
-    fn get(&mut self) -> &mut Transaction<PoolConnection<PgConnection>>;
-    async fn commit(self) -> ();
-    async fn rollback(self) -> ();
-}
+pub type Pool<T> = r2d2::Pool<ConnectionManager<T>>;
+pub type PoolConnection = PooledConnection<ConnectionManager<PgConnection>>;
+// pub struct RepositoryImpl (pub Transaction<PoolConnection<PgConnection>>);
+//
+// #[async_trait]
+// impl Repository for RepositoryImpl {
+//     fn get(&mut self) -> &mut Transaction<PoolConnection<PgConnection>> {
+//         self.0.borrow_mut()
+//     }
+//
+//     async fn commit(self) -> () {
+//         self.0.commit().await;
+//     }
+//
+//     async fn rollback(self) -> () {
+//         self.0.rollback().await;
+//     }
+// }
+//
+// #[async_trait]
+// pub trait Repository {
+//     fn get(&mut self) -> &mut Transaction<PoolConnection<PgConnection>>;
+//     async fn commit(self) -> ();
+//     async fn rollback(self) -> ();
+// }
 
 // pub struct TransactionSource {
 //     pub transaction: Arc<Transaction<PoolConnection<PgConnection>>>

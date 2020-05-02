@@ -2,14 +2,12 @@ use actix_web::web;
 use bcrypt::{DEFAULT_COST, hash};
 use diesel::sql_query;
 use futures_util::FutureExt;
-use sqlx::{Connection, Executor, PgConnection, Pool, Transaction};
-use sqlx::pool::PoolConnection;
 
 use crate::api::user_api::UserRegisterRequest;
 use crate::app_error::AppError;
-use crate::repository::{user_repository, RepositoryImpl, Repository};
-use crate::repository::user_repository::{CreateUserDto, UserRepository, MockUserRepository};
 use crate::utils::respond_ok;
+use crate::repository::user_repository::CreateUserDto;
+use crate::repository::PoolConnection;
 // async fn in_transaction<T, F>(
 //     conn: PoolConnection<PgConnection>,
 //     function: F,
@@ -21,26 +19,26 @@ use crate::utils::respond_ok;
 //     Ok(result)
 // }
 
-type Trans = Transaction<PoolConnection<PgConnection>>;
 
 
-pub async fn register_user(
-    request: UserRegisterRequest,
-    mut repository: RepositoryImpl
+pub fn register_user(
+    conn: &PoolConnection,
+    request: UserRegisterRequest
 ) -> Result<(), AppError>
 {
-    let exists = repository.exists_by_username_or_email(&request.username, &request.email).await?;
-    if !exists {
-        repository.create_user( CreateUserDto {
-            password: request.password,
-            email: request.email,
-            username: request.username,
-        }).await?;
-        repository.commit().await;
-        Ok(())
-    } else {
-        Err(AppError::ValidationError(vec!["Already exists".to_string()]))
-    }
+    // let exists = repository.exists_by_username_or_email(&request.username, &request.email).await?;
+    // if !exists {
+    //     repository.create_user( CreateUserDto {
+    //         password: request.password,
+    //         email: request.email,
+    //         username: request.username,
+    //     }).await?;
+    //     repository.commit().await;
+    //     Ok(())
+    // } else {
+    // }
+    Err(AppError::ValidationError(vec!["Already exists".to_string()]))
+
 }
 
 
