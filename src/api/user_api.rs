@@ -1,6 +1,7 @@
 use actix_web::{App, error, Error, HttpRequest, HttpResponse, HttpServer, middleware, Scope, web};
 use actix_web::http::StatusCode;
 use actix_web::web::{get, ServiceConfig};
+use futures_util::FutureExt;
 pub use log::{error, info, trace, warn};
 use serde::{Deserialize, Serialize};
 use sqlx::{PgConnection, Pool};
@@ -8,12 +9,13 @@ use validator::Validate;
 
 use crate::app_error::AppError;
 use crate::model::{Board, Card, CardTaskItem, Lane, User};
-use crate::utils::{is_blank, respond_ok};
+use crate::repository::user_repository::{UserRepository};
 use crate::service::user_service;
-use futures_util::FutureExt;
+use crate::utils::{is_blank, respond_ok};
 use crate::validation::validate;
-use crate::repository::{Repository, RepositoryImpl};
-use crate::repository::user_repository::UserRepository;
+use std::borrow::BorrowMut;
+use std::sync::Arc;
+use crate::repository::RepositoryImpl;
 
 #[derive(Serialize)]
 struct UserInfoResponse {
@@ -67,9 +69,10 @@ pub struct UserRegisterRequest {
 // }
 
 async fn register_user(request: web::Json<UserRegisterRequest>,
-                       pool: web::Data<Box<RepositoryImpl>>) -> Result<HttpResponse, AppError> {
+                       pool: web::Data<Pool<PgConnection>>) -> Result<HttpResponse, AppError> {
     validate(&request)?;
-    user_service::register_user(request.0, pool.as_ref()).await?;
+    user_service::register_user(request.0,  RepositoryImpl(pool.begin().await?) , )
+        .await?;
     respond_ok()
 }
 

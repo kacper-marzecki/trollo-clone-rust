@@ -26,7 +26,7 @@ use crate::api::user_api::user_routes;
 use crate::model::{Board, Card, CardTaskItem, Lane, User};
 use crate::service::authentication_service::get_identity_service;
 use actix_cors::Cors;
-use crate::repository::RepositoryImpl;
+use crate::repository::user_repository::UserRepository;
 
 mod api;
 mod model;
@@ -53,7 +53,7 @@ async fn main() -> std::io::Result<()> {
 
     HttpServer::new(move || {
         App::new()
-            .data(Box::new(RepositoryImpl{pool :db_pool.clone()}))
+            .data(db_pool.clone())
             .wrap(middleware::Logger::default())
             .wrap(get_identity_service())
             .wrap(Cors::new().supports_credentials().finish())
