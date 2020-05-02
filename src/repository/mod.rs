@@ -1,12 +1,11 @@
 use std::sync::Arc;
 use std::borrow::BorrowMut;
-use r2d2::PooledConnection;
-use r2d2_postgres::PostgresConnectionManager;
-use postgres::NoTls;
-
+use tokio_postgres::NoTls;
+use deadpool_postgres::ClientWrapper;
+use deadpool_postgres::Pool;
 pub mod user_repository;
 
-pub type ConnPool = r2d2::Pool<PostgresConnectionManager<NoTls>>;
+pub type ConnPool = Pool;
 
 // pub struct RepositoryImpl (pub Transaction<PoolConnection<PgConnection>>);
 //

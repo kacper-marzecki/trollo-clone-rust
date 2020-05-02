@@ -20,18 +20,18 @@ use crate::repository::user_repository::{CreateUserDto, UserRepository};
 
 
 
-pub fn register_user(
-    repository: &mut UserRepository,
+pub async fn register_user(
+    repository: &mut UserRepository<'_, '_>,
     request: UserRegisterRequest
 ) -> Result<(), AppError>
 {
-    let exists = repository.exists_by_username_or_email(&request.username, &request.email)?;
+    let exists = repository.exists_by_username_or_email(&request.username, &request.email).await?;
     if !exists {
         repository.create_user( CreateUserDto {
             password: request.password,
             email: request.email,
             username: request.username,
-        })?;
+        }).await?;
         Ok(())
     } else {
         Err(AppError::ValidationError(vec!["Already exists".to_string()]))

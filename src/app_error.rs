@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 //     result::{DatabaseErrorKind, Error as DBError},
 // };
 use derive_more::Display;
+use deadpool_postgres::PoolError;
 
 #[derive(Debug, Display, PartialEq)]
 #[allow(dead_code)]
@@ -70,14 +71,14 @@ impl ResponseError for AppError {
         }
     }
 }
-impl From<r2d2::Error> for AppError {
-    fn from(error: r2d2::Error) -> AppError {
+impl From<PoolError> for AppError {
+    fn from(error: PoolError) -> AppError {
         error!("Pool Error Error {:?}", error);
         AppError::PoolError(error.to_string())
     }
 }
-impl From<postgres::Error> for AppError {
-    fn from(error: postgres::Error) -> AppError {
+impl From<tokio_postgres::Error> for AppError {
+    fn from(error: tokio_postgres::Error) -> AppError {
         error!("Pool Error Error {:?}", error);
         AppError::InternalServerError("Internal Server error".into())
     }

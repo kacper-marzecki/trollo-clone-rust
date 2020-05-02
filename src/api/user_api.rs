@@ -73,10 +73,11 @@ pub struct UserRegisterRequest {
 async fn register_user(request: web::Json<UserRegisterRequest>,
                        pool: web::Data<ConnPool>) -> Result<HttpResponse, AppError> {
     validate(&request)?;
-    let mut conn = pool.get()?;
-    let mut transaction = conn.transaction()?;
+    let mut conn = pool.get().await?;
+    let mut transaction = conn.transaction().await?;
     let mut repository = UserRepository(&mut transaction);
     let result = user_service::register_user(&mut repository, request.0)
+        .await
         .map(|result|{
             transaction.commit();
             result
