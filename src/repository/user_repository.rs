@@ -26,12 +26,14 @@ pub struct UserRepositoryImpl<'a, 'b>{
 
 
 #[async_trait]
+#[cfg_attr(test, mockable)]
 pub trait UserRepository {
     async  fn create_user(&mut self, dto: CreateUserDto) -> Result<bool, AppError>;
     async  fn exists_by_username_or_email(&mut self, username: &String, email: &String) -> Result<bool, AppError>;
 }
 
 #[async_trait]
+#[cfg_attr(test, mockable)]
 impl UserRepository for UserRepositoryImpl<'_, '_> {
     async  fn create_user(&mut self, dto: CreateUserDto) -> Result<bool, AppError> {
         let created = self.conn.as_ref().unwrap().execute("

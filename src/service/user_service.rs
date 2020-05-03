@@ -62,16 +62,9 @@ async fn asyncOk()->Result<bool, AppError> {
     #[actix_rt::test]
     async fn doesnt_register_user_if_such_username_exists() {
         let mut mock = UserRepositoryImpl{conn: None};
-        // UserRepository::exists_by_username_or_email.mock_safe(|_, _, _| MockResult::Return(ok(Ok(true)).map(|x|x).boxed()));
         UserRepositoryImpl::exists_by_username_or_email.mock_safe(|mock: &mut repository::user_repository::UserRepositoryImpl<'_, '_>, _, _| MockResult::Return(Box::pin(asyncOk())));
         let result = register_user(&mut mock, UserRegisterRequest{username: "".into(), email: "".into(), password:"".into()}).await;
         assert!(result.is_err());
-        // let mut mock = MockUserRepository::default();
-        // mock.expect_exists_by_username_or_email().returning(|_, _| Ok(true));
-        // assert_eq!(mock.exists_by_username_or_email("asd".to_string(), "b".to_string()), Ok(true));
         println!("asd");
-        // let asd = MockUserRepository::new();
-        // mock!(Pool<PgConnection>)
-        //     .
     }
 }
