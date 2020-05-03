@@ -75,10 +75,10 @@ async fn register_user(request: web::Json<UserRegisterRequest>,
     validate(&request)?;
     let mut conn = pool.get().await?;
     let mut transaction = conn.transaction().await?;
-    let mut repository = UserRepository(&mut transaction);
+    let mut repository = UserRepository(Some(&mut transaction));
     let result = user_service::register_user(&mut repository, request.0)
         .await
-        .map(|result|{
+        .map(move |result|{
             transaction.commit();
             result
         })?;

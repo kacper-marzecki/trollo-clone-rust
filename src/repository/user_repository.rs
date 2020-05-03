@@ -13,12 +13,16 @@ use tokio_postgres::Transaction;
 use async_trait::async_trait;
 
 use crate::app_error::AppError;
+#[cfg(test)]
+use mocktopus::macros::*;
 
-pub struct UserRepository<'a, 'b>(pub &'a mut Transaction<'b>);
+#[cfg_attr(test, mockable)]
+pub struct UserRepository<'a, 'b>(pub Option<&'a mut Transaction<'b>>);
 
+#[cfg_attr(test, mockable)]
 impl UserRepository<'_, '_>  {
     pub async  fn create_user(&mut self, dto: CreateUserDto) -> Result<bool, AppError> {
-        let created = self.0.execute("
+        let created = self.0.as_ref().unwrap().execute("
         insert into users (username, email, password, avatar_id, created_at)
                                 values ($1, $2, $3, NULL, $4);
           ", &[&dto.username, &dto.email, &dto.password, &chrono::Utc::now().timestamp()], )
@@ -33,7 +37,7 @@ impl UserRepository<'_, '_>  {
     }
 
     pub async  fn exists_by_username_or_email(&mut self, username: &String, email: &String) -> Result<bool, AppError> {
-        let mut a = self.0.query("
+        let mut a = self.0.as_ref().unwrap().query("
         select exists(select 1 from users where username = $1 or email = $2)
     ", &[&username, &email])
             .await

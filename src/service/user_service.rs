@@ -17,11 +17,13 @@ use crate::repository::user_repository::{CreateUserDto, UserRepository};
 //     transaction.commit().await?;
 //     Ok(result)
 // }
-
-
+// #[cfg(not(test))]
+type UserRepo<'a, 'b> = UserRepository<'a, 'b>;
+// #[cfg(test)]
+// type UserRepo<'a> = crate::repository::user_repository::MockUserRepository<'a>;
 
 pub async fn register_user(
-    repository: &mut UserRepository<'_, '_>,
+    repository: &mut UserRepo<'_, '_>,
     request: UserRegisterRequest
 ) -> Result<(), AppError>
 {
@@ -41,12 +43,32 @@ pub async fn register_user(
 
 #[cfg(test)]
 pub mod tests {
-mock!{
-    pub MockRepo{}
+    use mocktopus::mocking::*;
+    use crate::service::user_service::{UserRepo, register_user};
+    use crate::repository::user_repository::UserRepository;
+    use deadpool_postgres::Transaction;
+    use crate::api::user_api::UserRegisterRequest;
+    use futures::future::ok;
+    use futures_util::future::Ready;
+    use futures_util::FutureExt;
+    use futures_util::future::Map;
+    use crate::app_error::AppError;
 
-}
+    // use futures_util::future::ok;
+async fn asyncOk()->Result<bool, AppError> {
+        Ok(true)
+    }
     #[actix_rt::test]
     async fn doesnt_register_user_if_such_username_exists() {
+        let mut mock = UserRepository(None);
+        // UserRepository::exists_by_username_or_email.mock_safe(|_, _, _| MockResult::Return(ok(Ok(true)).map(|x|x).boxed()));
+        UserRepository::exists_by_username_or_email.mock_safe(|_, _, _| MockResult::Return(asyncOk()));
+        let result = register_user(&mut mock, UserRegisterRequest{username: "".into(), email: "".into(), password:"".into()}).await;
+        assert!(result.is_err());
+        // let mut mock = MockUserRepository::default();
+        // mock.expect_exists_by_username_or_email().returning(|_, _| Ok(true));
+        // assert_eq!(mock.exists_by_username_or_email("asd".to_string(), "b".to_string()), Ok(true));
+        println!("asd");
         // let asd = MockUserRepository::new();
         // mock!(Pool<PgConnection>)
         //     .
