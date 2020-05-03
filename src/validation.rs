@@ -3,8 +3,7 @@ use validator::{Validate, ValidationErrors};
 
 use crate::app_error::AppError;
 
-/// Validate a struct and collect and return the errors
-pub fn validate<T>(params: &Json<T>) -> Result<(), AppError>
+pub fn validate<T>(params: &T) -> Result<(), AppError>
     where
         T: Validate,
 {
@@ -14,8 +13,6 @@ pub fn validate<T>(params: &Json<T>) -> Result<(), AppError>
     }
 }
 
-/// Collect ValidationErrors and return a vector of the messages
-/// Adds a default_error when none is supplied
 fn collect_errors(error: ValidationErrors) -> Vec<String> {
     error
         .field_errors()
@@ -62,7 +59,7 @@ mod tests {
     #[test]
     fn it_validates() {
         let request = get_test_request();
-        let response = validate(&Json(request)).unwrap_err();
+        let response = validate(&request).unwrap_err();
         let expected_error = AppError::ValidationError(vec![
             "first_name is required and must be at least 3 characters".to_string(),
         ]);
