@@ -16,7 +16,7 @@ use crate::service::user_service;
 use crate::utils::{is_blank, respond_ok};
 use crate::validation::validate;
 use crate::repository::{ConnPool};
-use crate::repository::user_repository::UserRepository;
+use crate::repository::user_repository::{UserRepository, UserRepositoryImpl};
 use std::rc::Rc;
 
 #[derive(Serialize)]
@@ -75,7 +75,7 @@ async fn register_user(request: web::Json<UserRegisterRequest>,
     validate(&request)?;
     let mut conn = pool.get().await?;
     let mut transaction = conn.transaction().await?;
-    let mut repository = UserRepository(Some(&mut transaction));
+    let mut repository = UserRepositoryImpl{conn: Some(&mut transaction)};
     let result = user_service::register_user(&mut repository, request.0)
         .await
         .map(move |result|{

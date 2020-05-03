@@ -18,12 +18,12 @@ use crate::repository::user_repository::{CreateUserDto, UserRepository};
 //     Ok(result)
 // }
 // #[cfg(not(test))]
-type UserRepo<'a, 'b> = UserRepository<'a, 'b>;
+// type UserRepo<'a, 'b> = UserRepository<'a, 'b>;
 // #[cfg(test)]
 // type UserRepo<'a> = crate::repository::user_repository::MockUserRepository<'a>;
 
-pub async fn register_user(
-    repository: &mut UserRepo<'_, '_>,
+pub async fn register_user<T: UserRepository>(
+    repository: &mut T,
     request: UserRegisterRequest
 ) -> Result<(), AppError>
 {
@@ -44,8 +44,8 @@ pub async fn register_user(
 #[cfg(test)]
 pub mod tests {
     use mocktopus::mocking::*;
-    use crate::service::user_service::{UserRepo, register_user};
-    use crate::repository::user_repository::UserRepository;
+    use crate::service::user_service::{register_user};
+    use crate::repository::user_repository::{UserRepository, UserRepositoryImpl};
     use deadpool_postgres::Transaction;
     use crate::api::user_api::UserRegisterRequest;
     use futures::future::ok;
@@ -53,6 +53,7 @@ pub mod tests {
     use futures_util::FutureExt;
     use futures_util::future::Map;
     use crate::app_error::AppError;
+    use crate::repository;
 
     // use futures_util::future::ok;
 async fn asyncOk()->Result<bool, AppError> {
@@ -60,9 +61,9 @@ async fn asyncOk()->Result<bool, AppError> {
     }
     #[actix_rt::test]
     async fn doesnt_register_user_if_such_username_exists() {
-        let mut mock = UserRepository(None);
+        let mut mock = UserRepositoryImpl{conn: None};
         // UserRepository::exists_by_username_or_email.mock_safe(|_, _, _| MockResult::Return(ok(Ok(true)).map(|x|x).boxed()));
-        UserRepository::exists_by_username_or_email.mock_safe(|_, _, _| MockResult::Return(asyncOk()));
+        UserRepositoryImpl::exists_by_username_or_email.mock_safe(|mock: &mut repository::user_repository::UserRepositoryImpl<'_, '_>, _, _| MockResult::Return(Box::pin(asyncOk())));
         let result = register_user(&mut mock, UserRegisterRequest{username: "".into(), email: "".into(), password:"".into()}).await;
         assert!(result.is_err());
         // let mut mock = MockUserRepository::default();
