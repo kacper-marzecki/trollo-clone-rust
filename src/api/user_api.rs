@@ -1,23 +1,24 @@
 use std::borrow::BorrowMut;
+use std::rc::Rc;
 use std::sync::Arc;
 
 use actix_web::{App, error, Error, HttpRequest, HttpResponse, HttpServer, middleware, Scope, web};
 use actix_web::http::StatusCode;
 use actix_web::web::{get, ServiceConfig};
+use diesel::connection::Connection;
 use diesel::pg::PgConnection;
 use futures_util::FutureExt;
 pub use log::{error, info, trace, warn};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
-use diesel::connection::Connection;
+
 use crate::app_error::AppError;
 use crate::model::{Board, Card, CardTaskItem, Lane, User};
+use crate::repository::ConnPool;
+use crate::repository::user_repository::{UserRepository, UserRepositoryImpl};
 use crate::service::user_service;
 use crate::utils::{is_blank, respond_ok};
 use crate::validation::validate;
-use crate::repository::{ConnPool};
-use crate::repository::user_repository::{UserRepository, UserRepositoryImpl};
-use std::rc::Rc;
 
 #[derive(Serialize)]
 struct UserInfoResponse {
@@ -57,18 +58,6 @@ pub struct UserRegisterRequest {
     ))]
     pub password: String,
 }
-// impl UserRegisterRequest {
-//     pub fn validate(&self) -> Result<&Self, AppError> {
-//         if is_blank(&self.email)
-//         || is_blank(&self.password)
-//         || is_blank(&self.password_confirmation)
-//         || self.password.eq(self.password_confirmation.as_str()){
-//             Ok(self)
-//         } else {
-//             Err(AppError::ValidationError(vec!["validation Error".to_string()]))
-//         }
-//     }
-// }
 
 async fn register_user(request: web::Json<UserRegisterRequest>,
                        pool: web::Data<ConnPool>) -> Result<HttpResponse, AppError> {

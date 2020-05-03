@@ -5,22 +5,8 @@ use futures_util::FutureExt;
 
 use crate::api::user_api::UserRegisterRequest;
 use crate::app_error::AppError;
-use crate::utils::respond_ok;
 use crate::repository::user_repository::{CreateUserDto, UserRepository};
-// async fn in_transaction<T, F>(
-//     conn: PoolConnection<PgConnection>,
-//     function: F,
-// ) -> Result<T, AppError>
-// where F:  FnOnce(&mut Transaction<PoolConnection<PgConnection>>) -> Result<T, AppError> {
-//     let transaction = conn.begin().await?;
-//     let result = function(transaction).await?;
-//     transaction.commit().await?;
-//     Ok(result)
-// }
-// #[cfg(not(test))]
-// type UserRepo<'a, 'b> = UserRepository<'a, 'b>;
-// #[cfg(test)]
-// type UserRepo<'a> = crate::repository::user_repository::MockUserRepository<'a>;
+use crate::utils::respond_ok;
 
 pub async fn register_user<T: UserRepository>(
     repository: &mut T,
@@ -43,28 +29,81 @@ pub async fn register_user<T: UserRepository>(
 
 #[cfg(test)]
 pub mod tests {
-    use mocktopus::mocking::*;
-    use crate::service::user_service::{register_user};
-    use crate::repository::user_repository::{UserRepository, UserRepositoryImpl};
+    use std::cell::Cell;
+    use std::rc::Rc;
+    use std::sync::{Arc, Mutex};
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
     use deadpool_postgres::Transaction;
-    use crate::api::user_api::UserRegisterRequest;
     use futures::future::ok;
+    use futures_util::future::Map;
     use futures_util::future::Ready;
     use futures_util::FutureExt;
-    use futures_util::future::Map;
+    use mocktopus::mocking::*;
+
+    use crate::api::user_api::UserRegisterRequest;
     use crate::app_error::AppError;
     use crate::repository;
+    use crate::repository::user_repository::{UserRepository, UserRepositoryImpl};
+    use crate::service::user_service::register_user;
 
-    // use futures_util::future::ok;
-async fn asyncOk()->Result<bool, AppError> {
-        Ok(true)
+    async fn asyncOk<T>(x: T)->Result<T, AppError> {
+        Ok(x)
     }
+
+    fn counters() -> (Arc<Mutex<u8>>, Arc<Mutex<u8>>) {
+        let mock = Arc::new(Mutex::new(0_u8));
+        let clone =  mock.clone();
+        (mock, clone)
+    }
+
+    fn increment(counter: &mut Arc<Mutex<u8>>) {
+        *counter.lock().unwrap() += 1;
+    }
+
     #[actix_rt::test]
     async fn doesnt_register_user_if_such_username_exists() {
+        // given
         let mut mock = UserRepositoryImpl{conn: None};
-        UserRepositoryImpl::exists_by_username_or_email.mock_safe(|mock: &mut repository::user_repository::UserRepositoryImpl<'_, '_>, _, _| MockResult::Return(Box::pin(asyncOk())));
-        let result = register_user(&mut mock, UserRegisterRequest{username: "".into(), email: "".into(), password:"".into()}).await;
+        let (mut calls, mut calls_clone) = counters();
+        UserRepositoryImpl::exists_by_username_or_email
+            .mock_safe(move |mock: &mut repository::user_repository::UserRepositoryImpl<'_, '_>, _, _| {
+                increment(&mut calls_clone);
+                MockResult::Return(Box::pin(asyncOk(true)))
+            });
+        // when
+        let result = register_user(
+            &mut mock, UserRegisterRequest{username: "".into(), email: "".into(), password:"".into()}
+        ).await;
+        // then
         assert!(result.is_err());
-        println!("asd");
+        assert_eq!(*calls.lock().unwrap(), 1);
     }
+    #[actix_rt::test]
+    async fn registers_user_if_user_doesnt_exist() {
+        // given
+        let mut mock = UserRepositoryImpl{conn: None};
+        let (mut calls, mut calls_clone) = counters();
+        let (mut register_calls, mut register_calls_clone) = counters();
+        UserRepositoryImpl::exists_by_username_or_email
+            .mock_safe(move |mock: &mut repository::user_repository::UserRepositoryImpl<'_, '_>, _, _| {
+                increment(&mut calls_clone);
+                MockResult::Return(Box::pin(asyncOk(false)))
+            });
+        UserRepositoryImpl::create_user
+            .mock_safe(move |mock: &mut repository::user_repository::UserRepositoryImpl<'_, '_>,  _| {
+
+                increment(&mut register_calls_clone);
+                MockResult::Return(Box::pin(asyncOk(true)))
+            });
+        // when
+        let result = register_user(
+            &mut mock, UserRegisterRequest{username: "".into(), email: "".into(), password:"".into()}
+        ).await;
+        // then
+        assert!(result.is_ok());
+        assert_eq!(*calls.lock().unwrap(), 1);
+        assert_eq!(*register_calls.lock().unwrap(), 1);
+    }
+
 }
